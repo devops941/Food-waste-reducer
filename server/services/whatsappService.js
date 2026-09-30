@@ -73,9 +73,8 @@ export const sendExpiryAlertWhatsApp = async ({ userPhone, userName, expiringIte
     )
     .join('\n');
 
-  const text = `🌱 *Pantry Fresh Expiry Alert*\n\nHi ${userName || 'there'}, you have food items needing attention:\n\n${itemList}\n\n👉 Open Pantry Fresh to cook a zero-waste meal today: ${
-    process.env.CLIENT_URL || 'http://localhost:5173'
-  }`;
+  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const text = `🌱 *Pantry Fresh Expiry Alert*\n\nHi ${userName || 'there'}, you have food items needing attention:\n\n${itemList}\n\n👉 Open Pantry Fresh to cook a zero-waste meal today: ${clientUrl}`;
 
   return await sendWhatsAppMessage({ to: userPhone, message: text });
 };

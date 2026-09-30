@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,9 +13,6 @@ import pantryRoutes from './routes/pantryRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import recipeRoutes from './routes/recipeRoutes.js';
 import shoppingRoutes from './routes/shoppingRoutes.js';
-
-// Load environment variables
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
