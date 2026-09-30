@@ -34,6 +34,7 @@ export const sendExpiryReminderEmail = async ({ to, userName, expiringItems = []
   const mailer = getTransporter();
   const from = process.env.SMTP_FROM || '"Pantry Fresh" <no-reply@pantryfresh.app>';
   const appUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  console.log(`[Email Service] reminder link base URL: ${appUrl}`);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -130,6 +131,7 @@ export const sendTestEmail = async ({ to, userName }) => {
   const mailer = getTransporter();
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || '"Pantry Fresh" <no-reply@pantryfresh.app>';
   const appUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  console.log(`[Email Service] test email link base URL: ${appUrl}`);
 
   if (!mailer) {
     return {
