@@ -28,11 +28,39 @@ initReminderCron();
 
 const app = express();
 
-// Middlewares
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
-  credentials: true,
-}));
+// Allowed origins list for CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://food-waste-reducer-1w7j.vercel.app',
+  'https://food-waste-reducer-eight.vercel.app',
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map((s) => s.trim()) : []),
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+      try {
+        const hostname = new URL(origin).hostname;
+        if (
+          allowedOrigins.includes(origin) ||
+          hostname === 'localhost' ||
+          hostname.endsWith('.vercel.app')
+        ) {
+          return callback(null, true);
+        }
+      } catch (err) {
+        // fallback
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 app.use(express.json());
 
 // API Routes

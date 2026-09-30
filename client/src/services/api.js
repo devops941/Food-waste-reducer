@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+const getBaseUrl = () => {
+  let url = (import.meta.env.VITE_API_URL || 'https://food-waste-reducer-eight.vercel.app/api').trim();
+  if (url && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/')) {
+    url = `https://${url}`;
+  }
+  return url.replace(/\/+$/, '');
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: getBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
