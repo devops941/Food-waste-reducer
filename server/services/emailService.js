@@ -33,9 +33,11 @@ export const sendExpiryReminderEmail = async ({ to, userName, expiringItems = []
 
   const mailer = getTransporter();
   const from = process.env.SMTP_FROM || '"Pantry Fresh" <no-reply@pantryfresh.app>';
-  const appUrl = (process.env.CLIENT_URL || 'https://food-waste-reducer-1w7j.vercel.app').replace(/\/+$/, '');
-  //'http://localhost:5173'
-  console.log(`[Email Service] reminder link base URL: ${appUrl}`);
+  const liveUrl = (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+    ? process.env.CLIENT_URL.replace(/\/+$/, '')
+    : 'https://food-waste-reducer-1w7j.vercel.app';
+  const targetLink = `${liveUrl}/recipes`;
+  console.log(`[Email Service] reminder link target: ${targetLink}`);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -93,8 +95,15 @@ export const sendExpiryReminderEmail = async ({ to, userName, expiringItems = []
         </table>
 
         <div style="margin-top: 24px; text-align: center;">
-          <a href="${appUrl}/recipes" style="display: inline-block; background: #4F7A4A; color: #FFFFFF; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          <a href="${targetLink}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #4F7A4A; color: #FFFFFF; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px;">
             Find Recipes for These Items →
+          </a>
+        </div>
+
+        <div style="margin-top: 16px; text-align: center;">
+          <p style="font-size: 12px; color: #6B7A70; margin-bottom: 4px;">Direct Link:</p>
+          <a href="${targetLink}" target="_blank" rel="noopener noreferrer" style="font-size: 13px; color: #4F7A4A; word-break: break-all;">
+            ${targetLink}
           </a>
         </div>
       </div>
@@ -111,10 +120,11 @@ export const sendExpiryReminderEmail = async ({ to, userName, expiringItems = []
   }
 
   try {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     const info = await mailer.sendMail({
       from,
       to,
-      subject: `🌱 ${expiringItems.length} items expiring soon in your pantry`,
+      subject: `🌱 ${expiringItems.length} items expiring soon [${timestamp}] — Pantry Fresh`,
       html,
     });
     console.log(`[Email Service] Sent expiry email to ${to}: ${info.messageId}`);
@@ -131,8 +141,11 @@ export const sendTestEmail = async ({ to, userName }) => {
 
   const mailer = getTransporter();
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || '"Pantry Fresh" <no-reply@pantryfresh.app>';
-  const appUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
-  console.log(`[Email Service] test email link base URL: ${appUrl}`);
+  const liveUrl = (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost'))
+    ? process.env.CLIENT_URL.replace(/\/+$/, '')
+    : 'https://food-waste-reducer-1w7j.vercel.app';
+  const targetLink = `${liveUrl}/dashboard`;
+  console.log(`[Email Service] test email link target: ${targetLink}`);
 
   if (!mailer) {
     return {
@@ -152,7 +165,7 @@ export const sendTestEmail = async ({ to, userName }) => {
         <h2 style="color: #1F2A24; font-size: 20px; margin-top: 0;">Email Alerts Verified! ✨</h2>
         <p style="color: #6B7A70; font-size: 14px; line-height: 1.6;">
           Hello <strong>${userName || 'Pantry Fresh User'}</strong>,<br/><br/>
-          This is a test notification confirming that your daily zero-waste expiry alert email system is configured and working perfectly.
+          This is a fresh test notification confirming that your daily zero-waste expiry alert email system is configured and working on the live production app.
         </p>
 
         <div style="background: #F4F7F4; border-left: 4px solid #4F7A4A; padding: 12px 16px; border-radius: 8px; margin: 20px 0;">
@@ -162,8 +175,15 @@ export const sendTestEmail = async ({ to, userName }) => {
         </div>
 
         <div style="margin-top: 24px; text-align: center;">
-          <a href="${appUrl}/dashboard" style="display: inline-block; background: #4F7A4A; color: #FFFFFF; padding: 12px 24px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          <a href="${targetLink}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #4F7A4A; color: #FFFFFF; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px;">
             Open Pantry Dashboard →
+          </a>
+        </div>
+
+        <div style="margin-top: 16px; text-align: center;">
+          <p style="font-size: 12px; color: #6B7A70; margin-bottom: 4px;">Direct Link:</p>
+          <a href="${targetLink}" target="_blank" rel="noopener noreferrer" style="font-size: 13px; color: #4F7A4A; word-break: break-all;">
+            ${targetLink}
           </a>
         </div>
       </div>
@@ -175,10 +195,11 @@ export const sendTestEmail = async ({ to, userName }) => {
   `;
 
   try {
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     const info = await mailer.sendMail({
       from,
       to,
-      subject: '🌱 Pantry Fresh Test Email Alert — Verified Successfully',
+      subject: `🌱 Pantry Fresh Live Alert [${timestamp}] — Open Dashboard`,
       html,
     });
     console.log(`[Email Service] Sent test email to ${to}: ${info.messageId}`);
