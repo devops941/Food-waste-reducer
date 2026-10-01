@@ -33,7 +33,8 @@ export const sendExpiryReminderEmail = async ({ to, userName, expiringItems = []
 
   const mailer = getTransporter();
   const from = process.env.SMTP_FROM || '"Pantry Fresh" <no-reply@pantryfresh.app>';
-  const appUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const appUrl = (process.env.CLIENT_URL || 'https://food-waste-reducer-1w7j.vercel.app').replace(/\/+$/, '');
+  //'http://localhost:5173'
   console.log(`[Email Service] reminder link base URL: ${appUrl}`);
 
   const today = new Date();
