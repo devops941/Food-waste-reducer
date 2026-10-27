@@ -16,6 +16,7 @@ import apiClient from '../api/client';
 import { AuthContext } from '../context/AuthContext';
 import { COLORS, FONTS } from '../theme';
 import {
+  scheduleDailyMorningExpiryNotifications,
   scheduleDaily7AMExpiryNotification,
   triggerInstantTestNotification,
 } from '../services/notificationService';
@@ -42,11 +43,11 @@ export default function HomeScreen() {
       const items = pantryRes.data?.items || pantryRes.data?.data || [];
       if (Array.isArray(items) && items.length > 0) {
         setPantryItems(items);
-        scheduleDaily7AMExpiryNotification(items);
+        scheduleDailyMorningExpiryNotifications(items);
       } else {
         const fallback = getDefaultExpiringItems();
         setPantryItems(fallback);
-        scheduleDaily7AMExpiryNotification(fallback);
+        scheduleDailyMorningExpiryNotifications(fallback);
       }
 
       // 2. Fetch top recipe
@@ -76,12 +77,20 @@ export default function HomeScreen() {
   const handleTestNotification = async () => {
     try {
       await triggerInstantTestNotification();
-      Alert.alert(
-        'Test Alert Sent! 🔔',
-        'Notification scheduled for 2 seconds from now. Your recurring Daily 7:00 AM notification is active.'
-      );
+      const msg =
+        'Daily 07:00 AM & 08:00 AM morning alerts are active! Also sent an instant 2-second test alert to verify your notification bar.';
+      if (Platform.OS === 'web') {
+        window.alert(`Morning Alerts Active! ☀️\n\n${msg}`);
+      } else {
+        Alert.alert('Morning Alerts Active! ☀️', msg);
+      }
     } catch (err) {
-      Alert.alert('Notification Setup', err.message || 'Please enable notifications in phone settings.');
+      const errMsg = err.message || 'Please enable notifications in phone settings.';
+      if (Platform.OS === 'web') {
+        window.alert(`Notification Setup: ${errMsg}`);
+      } else {
+        Alert.alert('Notification Setup', errMsg);
+      }
     }
   };
 
@@ -123,15 +132,15 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Daily 7:00 AM Expiry Notification Status Card */}
+      {/* Daily 7:00 AM & 8:00 AM Expiry Notification Status Card */}
       <View style={styles.notifBanner}>
         <View style={styles.notifLeftCol}>
           <View style={styles.notifBellCircle}>
             <Ionicons name="notifications-outline" size={17} color={COLORS.forestGreen} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.notifTitle}>Daily 7:00 AM Expiry Alert</Text>
-            <Text style={styles.notifSubtitle}>Active • Notifies you every morning</Text>
+            <Text style={styles.notifTitle}>Daily 7:00 AM & 8:00 AM Alerts</Text>
+            <Text style={styles.notifSubtitle}>Active • Morning expiry check & meal planner</Text>
           </View>
         </View>
         <TouchableOpacity
