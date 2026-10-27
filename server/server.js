@@ -13,6 +13,7 @@ import pantryRoutes from './routes/pantryRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import recipeRoutes from './routes/recipeRoutes.js';
 import shoppingRoutes from './routes/shoppingRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +28,9 @@ const app = express();
 
 // Allowed origins list for CORS
 const allowedOrigins = [
+  'http://localhost:8081',
+  'http://127.0.0.1:8081',
+  'http://localhost:19006',
   'http://localhost:5173',
   'http://localhost:3000',
   'https://food-waste-reducer-1w7j.vercel.app',
@@ -44,6 +48,10 @@ app.use(
         if (
           allowedOrigins.includes(origin) ||
           hostname === 'localhost' ||
+          hostname === '127.0.0.1' ||
+          hostname.startsWith('192.168.') ||
+          hostname.startsWith('10.') ||
+          hostname.startsWith('172.') ||
           hostname.endsWith('.vercel.app')
         ) {
           return callback(null, true);
@@ -51,14 +59,14 @@ app.use(
       } catch (err) {
         // fallback
       }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+      return callback(null, true); // Allow Expo / mobile network requests
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -66,6 +74,7 @@ app.use('/api/pantry', pantryRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/shopping', shoppingRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Base health check route
 app.get('/api/health', (req, res) => {
@@ -87,6 +96,6 @@ app.get('*', (req, res, next) => {
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`[Pantry Fresh Server] Running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Pantry Fresh Server] Running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT} (listening on 0.0.0.0)`);
 });

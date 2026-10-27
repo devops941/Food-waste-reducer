@@ -61,25 +61,29 @@ export const generateRecipesWithLLM = async ({
   }
   const dietStr = dietList.length > 0 ? dietList.join(', ') : 'No restriction (Omnivore / Any)';
 
-  const systemPrompt = `You are a world-class zero-waste chef and recipe developer.
-Your mission is to help a home cook create delicious, healthy meals that strictly prioritize using ingredients that are expiring soon.
+  const systemPrompt = `You are a world-class zero-waste chef and culinary developer.
+Your mission is to help a home cook create delicious, healthy meals that strictly prioritize using ingredients that are in their pantry, especially those expiring soon.
 
 Rules:
-1. CRITICAL: Prioritize soon-to-expire items listed in "EXPIRING SOON INGREDIENTS", especially highly perishable proteins like fresh chicken, fish, seafood, and meat before they spoil.
+1. CRITICAL: Prioritize soon-to-expire items listed in "EXPIRING SOON INGREDIENTS", especially perishable proteins like fresh chicken, fish, seafood, meat, dairy, or fresh produce before they spoil.
 2. If non-vegetarian items (e.g. chicken, fish, salmon, prawns, meat, seafood) are listed in "EXPIRING SOON INGREDIENTS" and no Vegetarian/Vegan restriction is active, you MUST generate delicious non-vegetarian recipes highlighting these proteins!
-3. Keep missing ingredients to an absolute minimum (max 2-3 common household staples like salt, cooking oil, garlic, black pepper).
-4. Respect active dietary preferences strictly: (${dietStr}).
-5. Output MUST be ONLY a valid JSON array of 3 recipe objects, with NO markdown ticks, NO explanations, NO intro text.
-
-JSON Schema for each recipe:
+3. STRICT INGREDIENT MATCHING: "usesIngredients" in each recipe MUST ONLY list items that are actually present in the user's pantry. Do NOT hallucinate items the user does not have.
+4. Keep missing ingredients minimal (max 2-3 common household staples like salt, cooking oil, garlic, black pepper).
+5. Respect active dietary preferences strictly: (${dietStr}).
+6. VARIETY: Each recipe must be distinct in style, technique, and cuisine (e.g., one quick stir-fry/sauté, one comforting skillet/rice/pasta dish, one fresh warm bowl or bake).
+7. Output MUST be ONLY a valid JSON object matching this exact schema:
 {
-  "title": "string (appetizing recipe name)",
-  "time": "string (e.g. 15 mins, 25 mins)",
-  "servings": "string (e.g. 2 servings)",
-  "description": "string (1-2 sentences explaining why this dish saves the expiring food)",
-  "usesIngredients": ["string (ingredients from user's pantry)"],
-  "missingIngredients": ["string (minimal missing pantry items needed)"],
-  "steps": ["string (step 1)", "string (step 2)", "string (step 3)", "string (step 4)"]
+  "recipes": [
+    {
+      "title": "string (appetizing, creative recipe name)",
+      "time": "string (e.g. 15 mins, 25 mins)",
+      "servings": "string (e.g. 2 servings)",
+      "description": "string (1-2 sentences explaining why this dish saves the expiring food)",
+      "usesIngredients": ["string (exact names from user's pantry)"],
+      "missingIngredients": ["string (minimal missing pantry staples needed)"],
+      "steps": ["string (step 1)", "string (step 2)", "string (step 3)", "string (step 4)"]
+    }
+  ]
 }`;
 
   const userPrompt = `USER'S PANTRY:
@@ -87,17 +91,18 @@ JSON Schema for each recipe:
 - OTHER AVAILABLE PANTRY INGREDIENTS: ${otherItemsStr || 'None specified'}
 - DIETARY PREFERENCES / FILTER: ${dietStr}
 
-Generate 3 creative, delicious recipes that use up the expiring food. Output pure JSON array only.`;
+Generate 3 creative, delicious, distinct zero-waste recipes strictly using the user's pantry foods above. Output pure JSON object only with "recipes" array.`;
 
-  // Attempt configured model first, then fallback to versatile models
-  const modelsToTry = [
+  // 1. Attempt Groq models
+  const groqModelsToTry = [
     configuredModel,
-    'llama-3.3-70b-versatile',
-    'llama-3.1-8b-instant',
-    'mixtral-8x7b-32768',
+    'openai/gpt-oss-120b',
+    'openai/gpt-oss-20b',
+    'qwen/qwen3.8-27b',
   ];
+  const uniqueGroqModels = [...new Set(groqModelsToTry)];
 
-  for (const model of modelsToTry) {
+  for (const model of uniqueGroqModels) {
     try {
       console.log(`[LLM Service] Calling Groq API with model: ${model}`);
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -112,40 +117,93 @@ Generate 3 creative, delicious recipes that use up the expiring food. Output pur
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userPrompt },
           ],
-          temperature: 0.6,
-          max_tokens: 2000,
+          temperature: 0.7,
+          max_tokens: 2500,
           response_format: { type: 'json_object' },
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.warn(`[LLM Service] Model ${model} failed with:`, errorData);
-        continue; // Try next model
+        console.warn(`[LLM Service] Groq model ${model} failed:`, errorData);
+        continue;
       }
 
       const data = await response.json();
       const content = data.choices?.[0]?.message?.content;
-
       if (!content) continue;
 
-      // Clean & parse JSON safely
       const parsed = parseLLMJson(content);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      } else if (parsed && Array.isArray(parsed.recipes)) {
+      if (parsed && Array.isArray(parsed.recipes) && parsed.recipes.length > 0) {
         return parsed.recipes;
+      } else if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
       }
     } catch (err) {
       console.error(`[LLM Service Exception with ${model}]:`, err.message);
     }
   }
 
-  console.warn('[LLM Service] All Groq models failed or returned invalid format. Using curated recipes.');
+  // 2. Fallback to Gemini if Groq is unavailable
+  console.log('[LLM Service] Trying Gemini fallback for recipe generation...');
+  const geminiResult = await generateRecipesWithGemini(systemPrompt, userPrompt);
+  if (geminiResult && geminiResult.length > 0) {
+    return geminiResult;
+  }
+
+  // 3. Last-resort fallback to curated templates tailored to user's real ingredients
+  console.warn('[LLM Service] Groq & Gemini unavailable. Using curated zero-waste templates.');
   return getCuratedFallbackRecipes(expiringItems, allPantryItems, customDietFilter);
 };
 
+/**
+ * Gemini Fallback for Zero-Waste Recipe Generation
+ */
+const generateRecipesWithGemini = async (systemPrompt, userPrompt) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+
+  const candidateModels = [
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3.7-flash',
+  ];
+
+  for (const model of candidateModels) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+          generationConfig: {
+            temperature: 0.6,
+            response_mime_type: 'application/json',
+          },
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const parsed = parseLLMJson(text);
+        if (parsed && Array.isArray(parsed.recipes) && parsed.recipes.length > 0) {
+          console.log(`[LLM Service] Successfully generated recipes with Gemini (${model})`);
+          return parsed.recipes;
+        } else if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (err) {
+      console.warn(`[Gemini Recipe Gen Error with ${model}]:`, err.message);
+    }
+  }
+  return null;
+};
+
 const parseLLMJson = (text) => {
+  if (!text) return null;
   try {
     let clean = text.trim();
     if (clean.startsWith('```json')) clean = clean.substring(7);
@@ -153,6 +211,16 @@ const parseLLMJson = (text) => {
     if (clean.endsWith('```')) clean = clean.substring(0, clean.length - 3);
     return JSON.parse(clean.trim());
   } catch (err) {
+    // Attempt extracting outermost json object
+    try {
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        return JSON.parse(text.slice(start, end + 1));
+      }
+    } catch {
+      // Ignore
+    }
     console.error('[LLM JSON Parse Error]', err.message);
     return null;
   }

@@ -1,0 +1,10 @@
+{
+  "name": "food-waste-reducer-workspace",
+  "private": true,
+  "scripts": {
+    "mobile": "npm run tunnel --prefix mobile",
+    "mobile:start": "npm start --prefix mobile",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client"
+  }
+}

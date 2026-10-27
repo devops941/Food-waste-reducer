@@ -13,6 +13,10 @@
   - Daily 8:00 AM scheduled background job (`node-cron`).
   - HTML email digests via **Nodemailer**.
   - Instant mobile alerts via **Meta WhatsApp Business Cloud API**.
+- **📱 React Native Mobile App**:
+  - **📷 Smart Product & Expiry Date Auto-Scanner**: Snap grocery packages or expiry labels to auto-populate inventory with OCR.
+  - **🍲 AI Dish Recognition & Recipe Studio**: Photograph any cooked meal or leftovers to identify the dish, get step-by-step preparation steps, and receive zero-waste leftover repurposing ideas.
+  - **🧺 Mobile Pantry Companion**: Real-time expiry badges and zero-waste recipe cooking on iOS and Android with Expo.
 - **📊 Household Impact & Savings Insights**: Interactive Recharts analytics tracking dollars saved, food rescued, and carbon footprint diverted.
 - **🛒 Smart Shopping List**: Fast grocery checklist with 1-click recipe missing ingredient addition and *"Move to Pantry"* transfer.
 - **🎨 Organic Design System**: Custom warm cream & sage palette, soft shadows, Playfair Display typography, responsive mobile-first UI.
@@ -21,9 +25,10 @@
 
 ## 🛠 Tech Stack
 
-- **Frontend**: React 18, Vite, React Router, Tailwind CSS, Axios, Recharts, Lucide Icons
-- **Backend**: Node.js, Express.js, MongoDB (Mongoose), JWT, Bcrypt, Dotenv, CORS
-- **AI & Integrations**: Groq LLM API, Meta WhatsApp Business Cloud API, Node-Cron, Nodemailer
+- **Mobile App**: React Native, Expo SDK 52, Expo Image Picker, React Navigation, Async Storage
+- **Frontend Web**: React 18, Vite, React Router, Tailwind CSS, Axios, Recharts, Lucide Icons
+- **Backend API**: Node.js, Express.js, MongoDB (Mongoose), JWT, Bcrypt, Dotenv, CORS
+- **AI & Integrations**: Multimodal AI Vision & OCR, Groq LLM API, Meta WhatsApp Business Cloud API, Node-Cron, Nodemailer
 
 ---
 

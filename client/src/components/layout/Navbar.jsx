@@ -35,9 +35,11 @@ export function Navbar({ user, onLogout }) {
         
         {/* Brand Logo */}
         <Link to="/" className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-sage-500 flex items-center justify-center text-white shadow-soft-sm group-hover:bg-sage-600 transition-colors">
-            <Leaf className="w-5 h-5 transition-transform group-hover:rotate-6" />
-          </div>
+          <img
+            src="/app-icon.png"
+            alt="Pantry Fresh"
+            className="w-9 h-9 rounded-xl shadow-soft-sm object-cover group-hover:scale-105 transition-transform"
+          />
           <div className="flex flex-col">
             <span className="font-serif text-lg font-bold text-charcoal tracking-tight leading-none">
               Pantry Fresh

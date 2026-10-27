@@ -31,3 +31,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Cloudflare tunnel binary and temp output
+server/cloudflared.exe
+server/cloudflared_output.txt

@@ -25,7 +25,7 @@ export const sendWhatsAppMessage = async ({ to, message }) => {
 
   try {
     const url = `https://graph.facebook.com/${version}/${phoneNumberId}/messages`;
-    
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -65,15 +65,14 @@ export const sendExpiryAlertWhatsApp = async ({ userPhone, userName, expiringIte
   const itemList = expiringItems
     .map(
       (item) =>
-        `• *${item.name}* (${item.quantity}) — ${
-          item.daysRemaining <= 0
-            ? '⚠️ Expired/Expires today'
-            : `⏳ ${item.daysRemaining} day(s) left`
+        `• *${item.name}* (${item.quantity}) — ${item.daysRemaining <= 0
+          ? '⚠️ Expired/Expires today'
+          : `⏳ ${item.daysRemaining} day(s) left`
         }`
     )
     .join('\n');
 
-  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  const clientUrl = (process.env.CLIENT_URL || 'https://food-waste-reducer-1w7j.vercel.app').replace(/\/+$/, '');
   const text = `🌱 *Pantry Fresh Expiry Alert*\n\nHi ${userName || 'there'}, you have food items needing attention:\n\n${itemList}\n\n👉 Open Pantry Fresh to cook a zero-waste meal today: ${clientUrl}`;
 
   return await sendWhatsAppMessage({ to: userPhone, message: text });

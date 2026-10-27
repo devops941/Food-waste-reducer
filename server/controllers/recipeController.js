@@ -13,27 +13,44 @@ const getMonthString = (date = new Date()) => {
 export const suggestRecipes = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const { dietaryFilter } = req.body;
+    const { dietaryFilter, items: customItems } = req.body;
 
-    // Fetch user's active pantry items
-    const activeItems = await PantryItem.find({
-      user: userId,
-      isUsed: false,
-      isWasted: false,
-    }).sort({ expiryDate: 1 });
+    // Fetch user's active pantry items (or use provided custom items from client)
+    let activeItems = [];
+    if (Array.isArray(customItems) && customItems.length > 0) {
+      activeItems = customItems;
+    } else {
+      activeItems = await PantryItem.find({
+        user: userId,
+        isUsed: false,
+        isWasted: false,
+      }).sort({ expiryDate: 1 });
+    }
+
+    // If active pantry is empty, check if there are any un-wasted items in user's history
+    if (activeItems.length === 0) {
+      const anyUserItems = await PantryItem.find({ user: userId, isWasted: false }).sort({ createdAt: -1 }).limit(5);
+      if (anyUserItems.length > 0) {
+        activeItems = anyUserItems;
+      }
+    }
 
     if (activeItems.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Your pantry is empty. Add a few ingredients to generate zero-waste recipes.',
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        recipes: [],
+        data: [],
+        message: 'Your pantry is empty. Add a few ingredients to generate customized zero-waste recipes.',
       });
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Identify items expiring within 3 days
+    // Identify items expiring within 3 days or items already near expiry
     const expiringItems = activeItems.filter((item) => {
+      if (!item.expiryDate) return true;
       const target = new Date(item.expiryDate);
       target.setHours(0, 0, 0, 0);
       const diff = Math.ceil((target - today) / (1000 * 60 * 60 * 24));
@@ -106,7 +123,8 @@ export const suggestRecipes = async (req, res, next) => {
       success: true,
       count: recipes.length,
       recipes,
-      expiringCount: expiringItems.length,
+      data: recipes, // Support both response.data.recipes and response.data.data
+      expiringCount: candidateExpiring.length,
     });
   } catch (error) {
     next(error);

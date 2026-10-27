@@ -65,17 +65,19 @@ export const checkAndDispatchReminders = async (targetUserId = null) => {
 };
 
 export const initReminderCron = () => {
-  // Run daily at 8:00 AM and test time 10:57, 10:58 AM
-  cron.schedule('57,58 10 * * *', () => {
-    console.log('[Reminder Cron] Triggering test reminder job at 10:57 / 10:58 AM');
+  // Run daily at 7:00 AM sharp to alert user of expiring food
+  cron.schedule('0 7 * * *', () => {
+    console.log('[Reminder Cron] Triggering daily 7:00 AM food expiry reminder job');
     checkAndDispatchReminders();
   });
 
+  // Additional 8:00 AM backup reminder
   cron.schedule('0 8 * * *', () => {
-    console.log('[Reminder Cron] Triggering daily 8 AM reminder job');
+    console.log('[Reminder Cron] Triggering daily 8:00 AM reminder job');
     checkAndDispatchReminders();
   });
-  console.log('[Reminder Cron] Scheduled reminder job for 10:57 AM / 10:58 AM and 8:00 AM daily.');
+
+  console.log('[Reminder Cron] Scheduled food expiry reminder job for 7:00 AM and 8:00 AM daily.');
 };
 
 export default {

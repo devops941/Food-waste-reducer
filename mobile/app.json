@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Pantry Fresh",
+    "slug": "pantry-fresh",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Pantry Fresh to access photos to analyze food dishes and scan expiry dates.",
+          "cameraPermission": "Allow Pantry Fresh to take photos of dishes and grocery expiry date labels."
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pantryfresh.app"
+    },
+    "android": {
+      "package": "com.pantryfresh.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#E4572E",
+        "foregroundImage": "./assets/icon.png"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ae884ad4-23fd-4568-9849-01f56d74606c"
+      }
+    }
+  }
+}

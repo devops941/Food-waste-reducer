@@ -18,6 +18,20 @@ export const protect = async (req, res, next) => {
     });
   }
 
+  // Support demo guest user for mobile app testing
+  if (token === 'demo_token') {
+    let demoUser = await User.findOne({ email: 'demo@pantryfresh.app' });
+    if (!demoUser) {
+      demoUser = await User.create({
+        name: 'Demo Chef',
+        email: 'demo@pantryfresh.app',
+        password: 'demopassword123',
+      });
+    }
+    req.user = demoUser;
+    return next();
+  }
+
   try {
     const decoded = jwt.verify(
       token,
