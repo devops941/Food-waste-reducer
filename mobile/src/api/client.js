@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Cloudflare Tunnel endpoint that routes globally to your local port 5000 (works on Wi-Fi, 4G/5G, and Expo tunnel)
-export const CLOUDFLARE_TUNNEL_URL = 'https://social-disturbed-abroad-face.trycloudflare.com/api';
+export const CLOUDFLARE_TUNNEL_URL = 'https://food-waste-reducer-3.onrender.com/api';
 const LOCAL_PC_IP = '192.168.1.30';
 
 const DEV_API_URL = Platform.select({
