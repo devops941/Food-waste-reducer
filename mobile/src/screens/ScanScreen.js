@@ -213,6 +213,13 @@ export default function ScanScreen() {
       setStage('identified');
     } catch (err) {
       console.warn('[Dish Analysis Warning]', err.message);
+      if (err.message?.includes('Network Error') || err.code === 'ECONNABORTED') {
+        Alert.alert(
+          'Backend Server Offline',
+          'Could not reach AI Vision server. Please start the backend (`npm run dev` in server) or ensure your phone is on the same Wi-Fi.',
+          [{ text: 'OK' }]
+        );
+      }
       setDishData(getDefaultDishData(customName));
       setStage('identified');
     } finally {
@@ -236,12 +243,19 @@ export default function ScanScreen() {
       setStage('identified');
     } catch (err) {
       console.warn('[Grocery Scan Warning]', err.message);
-      // If AI OCR had difficulty reading, provide an honest fallback rather than hardcoded milk
+      if (err.message?.includes('Network Error') || err.code === 'ECONNABORTED') {
+        Alert.alert(
+          'Backend Server Offline',
+          'Could not reach AI Vision server. Please start the backend (`npm run dev` in server) or ensure your phone is on the same Wi-Fi.',
+          [{ text: 'OK' }]
+        );
+      }
+      // Provide an honest fallback rather than hardcoded milk
       setGroceryData({
-        name: 'Instant Noodles / Packaged Grocery',
-        category: 'Pantry & Grains',
-        expiryDate: '2026-10-30',
-        quantity: '1 pack',
+        name: 'Fresh Grocery Item',
+        category: 'Produce',
+        expiryDate: '2026-11-05',
+        quantity: '1 item',
         confidence: 'medium',
       });
       setStage('identified');
@@ -445,7 +459,7 @@ export default function ScanScreen() {
 
         {/* Dish Title & Confidence Bar */}
         <Text style={styles.identifiedTitle}>
-          {isDishMode ? dish.dishName : groceryData?.name || 'Fresh Whole Milk'}
+          {isDishMode ? dish.dishName : groceryData?.name || 'Fresh Grocery Item'}
         </Text>
 
         <View style={styles.confidenceRow}>
@@ -466,7 +480,7 @@ export default function ScanScreen() {
             {/* CUISINE */}
             <View style={[styles.typeCard, { backgroundColor: COLORS.mintBg }]}>
               <Text style={styles.typeCardLabel}>CUISINE</Text>
-              <Text style={styles.typeCardValue}>{dish.cuisine || 'South Indian'}</Text>
+              <Text style={styles.typeCardValue}>{dish.cuisine || 'Chef Special'}</Text>
             </View>
 
             {/* DIET */}
@@ -478,13 +492,13 @@ export default function ScanScreen() {
             {/* COURSE */}
             <View style={[styles.typeCard, { backgroundColor: COLORS.peachBg }]}>
               <Text style={styles.typeCardLabel}>COURSE</Text>
-              <Text style={styles.typeCardValue}>{dish.course || 'Breakfast, main'}</Text>
+              <Text style={styles.typeCardValue}>{dish.course || 'Main meal'}</Text>
             </View>
 
             {/* METHOD */}
             <View style={[styles.typeCard, { backgroundColor: COLORS.mintBg }]}>
               <Text style={styles.typeCardLabel}>METHOD</Text>
-              <Text style={styles.typeCardValue}>{dish.method || 'Pan-fried'}</Text>
+              <Text style={styles.typeCardValue}>{dish.method || 'Fresh'}</Text>
             </View>
           </View>
         ) : (
@@ -515,7 +529,7 @@ export default function ScanScreen() {
             <View style={styles.otherMatchesRow}>
               {(dish.alternativeMatches && dish.alternativeMatches.length > 0
                 ? dish.alternativeMatches
-                : ['Lemon Rice', 'Uttapam']
+                : ['Quick Sauté', 'Chef Special']
               ).map((altName) => (
                 <TouchableOpacity
                   key={altName}
@@ -550,7 +564,7 @@ export default function ScanScreen() {
               </Text>
               <TextInput
                 style={styles.modalInput}
-                placeholder="e.g. South Indian Curd Rice, Chicken Biryani"
+                placeholder="e.g. Pasta, Salad, Chicken Biryani, Tacos"
                 placeholderTextColor={COLORS.textMuted}
                 value={searchDishInput}
                 onChangeText={setSearchDishInput}
@@ -652,7 +666,7 @@ export default function ScanScreen() {
       {/* Title & Subtitle */}
       <Text style={styles.recipeMainTitle}>{dish.dishName}</Text>
       <Text style={styles.recipeMainSub}>
-        {dish.cuisine || 'South Indian'} • {dish.diet || 'Vegetarian'} • {dish.course || 'Breakfast'}
+        {dish.cuisine || 'Chef Special'} • {dish.diet || 'Balanced'} • {dish.course || 'Main meal'}
       </Text>
 
       {/* 3 Stat Badges: TIME, SERVES, LEVEL */}
@@ -899,14 +913,149 @@ const DISH_DATABASE = {
     alternativeMatches: ['Kadai Paneer', 'Shahi Paneer', 'Palak Paneer'],
     timerTip: 'Timer • 4 min simmer',
   },
+  roast_chicken: {
+    dishName: 'Golden Garlic Herb Chicken & Potatoes',
+    cuisine: 'Continental',
+    diet: 'Non-Vegetarian',
+    course: 'Dinner, entrée',
+    method: 'Pan-roasted',
+    prepTime: '35 mins',
+    confidence: 'High',
+    ingredients: [
+      'Chicken breast / thighs – 400g',
+      'Baby potatoes (halved) – 2 cups',
+      'Fresh rosemary & thyme – 2 sprigs',
+      'Garlic cloves (crushed) – 6 cloves',
+      'Olive oil – 2 tbsp',
+      'Cracked black pepper – 1 tsp',
+      'Sea salt – to taste',
+    ],
+    preparationSteps: [
+      'Cut potatoes into halves and cube chicken pieces uniformly.',
+      'Toss with olive oil, minced garlic, chopped rosemary, salt, and black pepper.',
+      'Sear chicken in a hot skillet for 5 minutes per side until golden brown.',
+      'Add baby potatoes and roast until tender on the inside and crispy on the edges.',
+      'Rest for 3 minutes and garnish with fresh parsley before serving hot.',
+    ],
+    alternativeMatches: ['Lemon Rosemary Chicken', 'Crispy Garlic Thighs'],
+    timerTip: 'Timer • 10 min skillet sear',
+  },
+  tacos: {
+    dishName: 'Crispy Avocado & Black Bean Street Tacos',
+    cuisine: 'Mexican',
+    diet: 'Vegetarian',
+    course: 'Lunch, snack',
+    method: 'Skillet-warmed',
+    prepTime: '15 mins',
+    confidence: 'High',
+    ingredients: [
+      'Corn tortillas – 6 small',
+      'Black beans (rinsed & drained) – 1 can',
+      'Ripe avocado (sliced) – 1 pc',
+      'Shredded cabbage or greens – 1 cup',
+      'Fresh pico de gallo / salsa – ½ cup',
+      'Crumbled cotija or feta – 2 tbsp',
+      'Lime wedges – 1 lime',
+    ],
+    preparationSteps: [
+      'Warm corn tortillas on a dry skillet until blistered and pliable.',
+      'Warm black beans with a pinch of cumin, garlic powder, and sea salt.',
+      'Layer warm seasoned beans, crunchy shredded cabbage, and sliced avocado.',
+      'Top generously with fresh salsa and crumbled cotija cheese.',
+      'Squeeze fresh lime juice over top and serve immediately.',
+    ],
+    alternativeMatches: ['Loaded Veggie Burrito', 'Fiesta Bean Quesadilla'],
+    timerTip: 'Timer • 3 min tortilla warm',
+  },
+  stir_fry: {
+    dishName: 'Asian Sesame Garlic Veggie & Tofu Stir-Fry',
+    cuisine: 'Asian',
+    diet: 'Vegetarian',
+    course: 'Dinner, main',
+    method: 'Wok stir-fry',
+    prepTime: '20 mins',
+    confidence: 'High',
+    ingredients: [
+      'Firm tofu or paneer (cubed) – 200g',
+      'Broccoli florets & bell peppers – 2 cups',
+      'Soy sauce or tamari – 2 tbsp',
+      'Sesame oil – 1 tbsp',
+      'Fresh ginger & garlic (minced) – 1 tbsp',
+      'Toasted sesame seeds – 1 tsp',
+    ],
+    preparationSteps: [
+      'Press and cube tofu into bite-sized pieces; sear in hot oil until golden.',
+      'Add minced garlic and ginger to the wok and stir-fry for 30 seconds.',
+      'Toss in broccoli florets and bell peppers over high heat for 4 minutes.',
+      'Pour in soy sauce and sesame oil; toss vigorously until glossily coated.',
+      'Garnish with toasted sesame seeds and serve over warm rice or noodles.',
+    ],
+    alternativeMatches: ['Kung Pao Tofu', 'Teriyaki Vegetables'],
+    timerTip: 'Timer • 4 min high wok toss',
+  },
+  mushroom_risotto: {
+    dishName: 'Creamy Garlic & Herb Mushroom Risotto',
+    cuisine: 'Italian',
+    diet: 'Vegetarian',
+    course: 'Dinner, entrée',
+    method: 'Simmered',
+    prepTime: '30 mins',
+    confidence: 'High',
+    ingredients: [
+      'Arborio rice – 1 cup',
+      'Sliced button or cremini mushrooms – 2 cups',
+      'Vegetable broth (warm) – 3 cups',
+      'Olive oil & butter – 2 tbsp',
+      'Minced shallots & garlic – 2 tbsp',
+      'Grated parmesan – ¼ cup',
+    ],
+    preparationSteps: [
+      'Sauté sliced mushrooms in olive oil until browned and caramelized; set aside.',
+      'In the same pan, sauté shallots and garlic, then stir in Arborio rice to toast.',
+      'Ladle in warm broth one scoop at a time, stirring until absorbed before adding more.',
+      'Once rice is creamy and tender, fold back the sautéed mushrooms and butter.',
+      'Stir in grated parmesan cheese and fresh thyme before serving warm.',
+    ],
+    alternativeMatches: ['Wild Mushroom Pasta', 'Polenta with Mushrooms'],
+    timerTip: 'Timer • 18 min gentle simmer',
+  },
+  dal_tadka: {
+    dishName: 'Comforting Yellow Dal Tadka with Steamed Rice',
+    cuisine: 'North Indian',
+    diet: 'Vegetarian',
+    course: 'Main meal',
+    method: 'Pressure cooked & tempered',
+    prepTime: '25 mins',
+    confidence: 'High',
+    ingredients: [
+      'Yellow toor or moong dal – 1 cup',
+      'Ripe tomatoes (chopped) – 2 pcs',
+      'Ghee or oil – 2 tbsp',
+      'Cumin seeds & mustard seeds – 1 tsp',
+      'Garlic cloves (smashed) – 4 cloves',
+      'Kashmiri red chilli & turmeric – 1 tsp',
+      'Fresh coriander – a handful',
+    ],
+    preparationSteps: [
+      'Cook rinsed lentils with turmeric, water, and salt until soft and velvety.',
+      'Heat ghee in a pan, add cumin seeds, crushed garlic, and dried red chillies.',
+      'Add chopped tomatoes and cook until softened and ghee releases from edges.',
+      'Pour the aromatic sizzling tadka directly into the simmering cooked dal.',
+      'Garnish with fresh coriander leaves and serve hot with steamed basmati rice.',
+    ],
+    alternativeMatches: ['Dal Fry', 'Sambar Rice', 'Moong Khichdi'],
+    timerTip: 'Timer • 3 min sizzling tadka',
+  },
 };
+
+let lastDishIndex = -1;
 
 const getDefaultDishData = (customName) => {
   const query = (customName || '').toLowerCase().trim();
-  if (query.includes('curd') || query.includes('thayir') || query.includes('rice')) {
+  if (query.includes('curd') || query.includes('thayir') || query.includes('yogurt rice')) {
     return { ...DISH_DATABASE.curd_rice, dishName: customName || DISH_DATABASE.curd_rice.dishName };
   }
-  if (query.includes('biryani') || query.includes('pulao') || query.includes('chicken')) {
+  if (query.includes('biryani') || query.includes('pulao')) {
     return { ...DISH_DATABASE.biryani, dishName: customName || DISH_DATABASE.biryani.dishName };
   }
   if (query.includes('pasta') || query.includes('spaghetti') || query.includes('penne') || query.includes('noodle')) {
@@ -918,8 +1067,31 @@ const getDefaultDishData = (customName) => {
   if (query.includes('dosa') || query.includes('batter')) {
     return { ...DISH_DATABASE.dosa, dishName: customName || DISH_DATABASE.dosa.dishName };
   }
+  if (query.includes('taco') || query.includes('tortilla') || query.includes('mexican')) {
+    return { ...DISH_DATABASE.tacos, dishName: customName || DISH_DATABASE.tacos.dishName };
+  }
+  if (query.includes('chicken') || query.includes('roast') || query.includes('potato')) {
+    return { ...DISH_DATABASE.roast_chicken, dishName: customName || DISH_DATABASE.roast_chicken.dishName };
+  }
+  if (query.includes('stir') || query.includes('tofu') || query.includes('wok')) {
+    return { ...DISH_DATABASE.stir_fry, dishName: customName || DISH_DATABASE.stir_fry.dishName };
+  }
+  if (query.includes('risotto') || query.includes('mushroom')) {
+    return { ...DISH_DATABASE.mushroom_risotto, dishName: customName || DISH_DATABASE.mushroom_risotto.dishName };
+  }
+  if (query.includes('dal') || query.includes('lentil') || query.includes('sambar')) {
+    return { ...DISH_DATABASE.dal_tadka, dishName: customName || DISH_DATABASE.dal_tadka.dishName };
+  }
+
+  // If no customName entered, randomly pick a different dish from the database so it never repeats the same dish!
   if (!customName) {
-    return DISH_DATABASE.curd_rice;
+    const list = Object.values(DISH_DATABASE);
+    let nextIndex = Math.floor(Math.random() * list.length);
+    if (nextIndex === lastDishIndex && list.length > 1) {
+      nextIndex = (nextIndex + 1) % list.length;
+    }
+    lastDishIndex = nextIndex;
+    return list[nextIndex];
   }
 
   // Dynamic generator for any user-entered dish name

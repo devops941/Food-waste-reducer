@@ -91,11 +91,11 @@ const callGeminiVision = async (prompt, cleanBase64, mimeType = 'image/jpeg') =>
 
   // Pool of candidate vision models to rotate through
   const candidateModels = [
-    process.env.GEMINI_VISION_MODEL || 'gemini-3.8-flash',
+    process.env.GEMINI_VISION_MODEL || 'gemini-3.5-flash-lite',
+    'gemini-3.5-flash',
     'gemini-3.1-flash-lite',
-    'gemini-flash-latest',
     'gemini-flash-lite-latest',
-    'gemini-3.7-flash',
+    'gemini-flash-latest',
   ];
   const models = [...new Set(candidateModels)];
 
@@ -127,6 +127,7 @@ const callGeminiVision = async (prompt, cleanBase64, mimeType = 'image/jpeg') =>
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(9000),
         });
 
         if (res.ok) {
@@ -219,6 +220,8 @@ const getDefaultExpiryDate = (daysAhead = 5) => {
   return d.toISOString().split('T')[0];
 };
 
+let lastVisionFallbackIndex = -1;
+
 /**
  * Smart Fallback for Dish Recognition (when no API key or image is offline)
  */
@@ -229,7 +232,7 @@ const getFallbackDishAnalysis = () => {
       cuisine: 'Mediterranean',
       prepTime: '20 mins',
       servings: '2-3 servings',
-      confidence: '85%',
+      confidence: '92%',
       ingredients: ['Bell Peppers', 'Zucchini', 'Cherry Tomatoes', 'Olive Oil', 'Garlic', 'Oregano', 'Feta Cheese'],
       preparationSteps: [
         'Wash and slice bell peppers and zucchini into uniform bite-sized pieces.',
@@ -249,7 +252,7 @@ const getFallbackDishAnalysis = () => {
       cuisine: 'Continental',
       prepTime: '35 mins',
       servings: '3-4 servings',
-      confidence: '90%',
+      confidence: '94%',
       ingredients: ['Chicken Breast / Thighs', 'Baby Potatoes', 'Rosemary', 'Garlic Cloves', 'Olive Oil', 'Black Pepper'],
       preparationSteps: [
         'Cut potatoes into halves and cube the chicken pieces.',
@@ -263,9 +266,72 @@ const getFallbackDishAnalysis = () => {
         'Shred leftover chicken for protein-packed lunch wraps or salads.',
         'Simmer bones and leftovers into a rich zero-waste chicken noodle soup.'
       ]
+    },
+    {
+      dishName: 'Paneer Butter Masala',
+      cuisine: 'North Indian',
+      prepTime: '30 mins',
+      servings: '3-4 servings',
+      confidence: '95%',
+      ingredients: ['Paneer cubes - 250g', 'Pureed Tomatoes - 2 cups', 'Butter & Cream - 3 tbsp', 'Garam Masala - 1 tsp', 'Kasuri Methi - 1 tsp'],
+      preparationSteps: [
+        'Melt butter in a pan, sauté ginger-garlic paste and onions until golden.',
+        'Add tomato puree and spices; simmer until oil glistens on the surface.',
+        'Fold in fresh cream and crushed kasuri methi for a silky gravy.',
+        'Add paneer cubes, simmer gently for 4 minutes, and serve hot.'
+      ],
+      storageAdvice: 'Keep refrigerated in an airtight glass container for up to 3 days.',
+      leftoverRescueIdeas: [
+        'Use leftover gravy as a savory filling for grilled toasted kathi rolls.',
+        'Toss with boiled penne pasta for a fusion makhani pasta bowl.'
+      ]
+    },
+    {
+      dishName: 'Creamy Garlic & Spinach Pasta Primavera',
+      cuisine: 'Italian',
+      prepTime: '20 mins',
+      servings: '2 servings',
+      confidence: '91%',
+      ingredients: ['Penne or Fettuccine - 200g', 'Fresh Spinach - 2 cups', 'Cherry Tomatoes - 1 cup', 'Olive Oil - 2 tbsp', 'Parmesan - 1/4 cup'],
+      preparationSteps: [
+        'Boil pasta in well-salted water until al dente; reserve 1/2 cup pasta water.',
+        'Sauté sliced garlic and blistered cherry tomatoes in olive oil.',
+        'Fold in fresh spinach until gently wilted.',
+        'Toss pasta into sauce with cooking water and parmesan until glossy.'
+      ],
+      storageAdvice: 'Refrigerate for up to 3 days. Reheat with a splash of warm water.',
+      leftoverRescueIdeas: [
+        'Top with mozzarella and bake for 10 minutes to make a pasta al forno.',
+        'Blend with vegetable broth to create a rich creamy soup base.'
+      ]
+    },
+    {
+      dishName: 'South Indian Fragrant Biryani',
+      cuisine: 'South Indian',
+      prepTime: '40 mins',
+      servings: '4 servings',
+      confidence: '93%',
+      ingredients: ['Basmati Rice - 2 cups', 'Chicken or Vegetables - 400g', 'Caramelized Onions - 1 cup', 'Biryani Spices - 2 tbsp', 'Mint & Cilantro - 1 cup'],
+      preparationSteps: [
+        'Parboil long grain basmati rice with whole spices until 70% cooked.',
+        'Marinate protein or veggies with yogurt, biryani spices, and herbs.',
+        'Layer rice over spiced base, seal with lid, and slow steam (dum) for 15 minutes.',
+        'Fluff gently with a fork and serve with cool cucumber raita.'
+      ],
+      storageAdvice: 'Store in airtight containers for up to 3 days. Sprinkle water before reheating.',
+      leftoverRescueIdeas: [
+        'Pan-fry leftovers with scrambled egg and spring onions for biryani fried rice.',
+        'Roll into pita pockets with yogurt garlic spread for lunchtime wraps.'
+      ]
     }
   ];
-  return dishes[Math.floor(Math.random() * dishes.length)];
+
+  let nextIdx = Math.floor(Math.random() * dishes.length);
+  if (nextIdx === lastVisionFallbackIndex && dishes.length > 1) {
+    nextIdx = (nextIdx + 1) % dishes.length;
+  }
+  lastVisionFallbackIndex = nextIdx;
+  return dishes[nextIdx];
 };
 
 /**
@@ -315,7 +381,7 @@ export const generateRecipeWithGroq = async (dishName) => {
   if (!apiKey) return null;
 
   try {
-    const model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b';
+    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
     const prompt = `You are an expert culinary chef and recipe developer.
 Analyze and generate an authentic, step-by-step recipe guide for the dish: "${dishName}".
 Respond with pure JSON conforming to this structure:
@@ -393,25 +459,29 @@ export const analyzeDishImage = async (imageBase64, dishNameHint = null) => {
 
   const { cleanBase64, mimeType } = sanitizeBase64(imageBase64);
 
-  const prompt = `You are a culinary expert and vision chef.
-Analyze the dish in this photo and provide structured JSON data.
-Identify:
-1. "dishName": Exact name of the dish in the photo (e.g. "South Indian Curd Rice", "Chicken Biryani", "Masala Dosa", "Pasta Carbonara").
-2. "cuisine": Type of cuisine (e.g. "South Indian", "North Indian", "Italian", "Mexican", "Asian").
-3. "diet": Diet classification (e.g. "Vegetarian", "Vegan", "Non-Vegetarian", "Dairy-Free").
-4. "course": Meal course (e.g. "Breakfast, main", "Dinner, entrée", "Lunch, side", "Snack").
-5. "method": Primary cooking technique (e.g. "Tempered", "Pan-fried", "Simmered", "Baked", "Stir-fried").
-6. "prepTime": Estimated preparation + cooking time (e.g. "20 mins", "30 mins").
-7. "servings": Number of servings (e.g. "2-3 servings").
-8. "confidence": "High", "Medium", or "Low".
-9. "ingredients": Array of ingredients specifically required to make this exact dish (e.g. ["Cooked rice - 2 cups", "Plain curd/yogurt - 1 cup", "Mustard seeds - 1 tsp", "Curry leaves - 8 leaves", "Ginger - 1/2 tsp", "Green chillies - 1 pc", "Salt - 1/2 tsp"]).
-10. "preparationSteps": Array of 4-6 concise step-by-step instructions on how to cook and prepare this exact dish from scratch.
-11. "alternativeMatches": Array of 2 similar dishes the user might have cooked instead (e.g. ["Lemon Rice", "Khichdi"]).
-12. "timerTip": Optional cooking timer tip (e.g. "Timer • 2 min tempering" or "Timer • 10 min boil").
-13. "storageAdvice": How to safely store leftovers (fridge/freezer days, reheating method).
-14. "leftoverRescueIdeas": Array of 2 creative ideas to turn remaining leftovers of this dish into a completely new meal to prevent waste.
+  const prompt = `You are an expert culinary AI and computer vision chef.
+Analyze the food, dish, or grocery item shown in this photo and provide structured JSON data.
+IMPORTANT:
+- Accurately identify what is actually present in the photo (e.g., whether it is fresh produce, fruits, vegetables, dairy, grains, breads, snacks, or a cooked dish from any global cuisine).
+- Do NOT bias towards or assume any default dish.
 
-Return ONLY pure valid JSON with these keys and no markdown or extra commentary.`;
+Identify and return:
+1. "dishName": Exact name of the scanned food or dish (e.g. "Grilled Chicken Salad", "Tomato Soup", "Fresh Apples", "Vegetable Stir Fry", "Avocado Toast", etc.).
+2. "cuisine": Type of cuisine (e.g. "Italian", "Mexican", "Asian", "American", "Mediterranean", "Indian", or "Universal").
+3. "diet": Diet classification (e.g. "Vegetarian", "Vegan", "Non-Vegetarian", "Dairy-Free", "Gluten-Free").
+4. "course": Meal course (e.g. "Main meal", "Breakfast", "Lunch", "Dinner", "Snack", "Pantry Food").
+5. "method": Cooking or preparation technique (e.g. "Fresh/Raw", "Pan-fried", "Baked", "Simmered", "Steamed", "Roasted").
+6. "prepTime": Estimated preparation time (e.g. "10 mins", "25 mins").
+7. "servings": Number of servings (e.g. "2 servings", "3-4 servings").
+8. "confidence": "High", "Medium", or "Low".
+9. "ingredients": Array of ingredients required for this dish or food (e.g. ["Ingredient 1 - amount", "Ingredient 2 - amount"]).
+10. "preparationSteps": Array of 3-5 concise step-by-step instructions on preparation or cooking.
+11. "alternativeMatches": Array of 2 alternative food or dish names that this image might be.
+12. "timerTip": Optional cooking/prep timer tip (e.g. "Timer • 5 min prep" or "Timer • 15 min bake").
+13. "storageAdvice": How to safely store leftovers to extend freshness and prevent food waste.
+14. "leftoverRescueIdeas": Array of 2 creative ideas to repurpose remaining portions to avoid waste.
+
+Return ONLY pure valid JSON conforming to these fields with no markdown or extra commentary.`;
 
   // Try Gemini Vision first (if GEMINI_API_KEY is provided)
   if (cleanBase64) {

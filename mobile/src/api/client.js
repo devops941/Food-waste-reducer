@@ -2,22 +2,18 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Cloudflare Tunnel endpoint that routes globally to your local port 5000 (works on Wi-Fi, 4G/5G, and Expo tunnel)
+// Cloud backend and local network fallback
 export const CLOUDFLARE_TUNNEL_URL = 'https://food-waste-reducer-3.onrender.com/api';
-const LOCAL_PC_IP = '192.168.1.30';
+export const LOCAL_PC_IP = '192.168.1.30';
+export const LOCAL_API_URL = `http://${LOCAL_PC_IP}:5000/api`;
 
-const DEV_API_URL = Platform.select({
-  web: 'http://localhost:5000/api',
-  android: CLOUDFLARE_TUNNEL_URL,
-  ios: CLOUDFLARE_TUNNEL_URL,
-  default: CLOUDFLARE_TUNNEL_URL,
-});
+const DEV_API_URL = CLOUDFLARE_TUNNEL_URL;
 
 export const BASE_URL_STORAGE_KEY = '@pantry_fresh_base_url';
 
 const apiClient = axios.create({
   baseURL: DEV_API_URL,
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
     'Bypass-Tunnel-Reminder': 'true',
@@ -27,18 +23,11 @@ const apiClient = axios.create({
 // Attach JWT token from AsyncStorage to requests
 apiClient.interceptors.request.use(async (config) => {
   try {
-    if (Platform.OS === 'web') {
-      config.baseURL = 'http://localhost:5000/api';
+    let customUrl = await AsyncStorage.getItem(BASE_URL_STORAGE_KEY);
+    if (customUrl) {
+      config.baseURL = customUrl;
     } else {
-      let customUrl = await AsyncStorage.getItem(BASE_URL_STORAGE_KEY);
-      // Auto-migrate stale local IPs or dead tunnels to the live Cloudflare tunnel
-      if (customUrl && (customUrl.includes('192.168.1.9') || customUrl.includes('192.168.1.30') || customUrl.includes('.loca.lt'))) {
-        customUrl = CLOUDFLARE_TUNNEL_URL;
-        await AsyncStorage.setItem(BASE_URL_STORAGE_KEY, customUrl);
-      }
-      if (customUrl) {
-        config.baseURL = customUrl;
-      }
+      config.baseURL = DEV_API_URL;
     }
     let token = await AsyncStorage.getItem('@pantry_fresh_token');
     if (!token) {
@@ -51,13 +40,27 @@ apiClient.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Automatic Failover between Render Cloud and Local Server
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.code === 'ECONNABORTED' || error.message?.includes('Network Error')) {
-      console.warn(
-        `[Network Error] Could not reach backend at ${error.config?.baseURL || DEV_API_URL}. Ensure server is running on port 5000 and computer firewall allows incoming connections.`
-      );
+  async (error) => {
+    const originalRequest = error.config;
+    if (
+      originalRequest &&
+      !originalRequest._retry &&
+      (error.code === 'ECONNABORTED' || error.message?.includes('Network Error'))
+    ) {
+      originalRequest._retry = true;
+      const currentBase = originalRequest.baseURL || DEV_API_URL;
+      const alternateBase = currentBase.includes('onrender.com') ? LOCAL_API_URL : CLOUDFLARE_TUNNEL_URL;
+      console.log(`[API Failover] Primary failed (${currentBase}). Retrying via alternate backend: ${alternateBase}`);
+      originalRequest.baseURL = alternateBase;
+      try {
+        return await axios(originalRequest);
+      } catch (retryErr) {
+        console.warn(`[Network Error] Both endpoints failed (${currentBase} and ${alternateBase}). Ensure server is running on port 5000 or Render has finished booting.`);
+        return Promise.reject(retryErr);
+      }
     }
     return Promise.reject(error);
   }

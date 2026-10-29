@@ -45,9 +45,7 @@ export default function HomeScreen() {
         setPantryItems(items);
         scheduleDailyMorningExpiryNotifications(items);
       } else {
-        const fallback = getDefaultExpiringItems();
-        setPantryItems(fallback);
-        scheduleDailyMorningExpiryNotifications(fallback);
+        setPantryItems([]);
       }
 
       // 2. Fetch top recipe
@@ -63,7 +61,7 @@ export default function HomeScreen() {
       }
     } catch (err) {
       console.warn('[Home Fetch Warning]', err.message);
-      setPantryItems(getDefaultExpiringItems());
+      setPantryItems([]);
       setFeaturedRecipe(getDefaultFeaturedRecipe());
     } finally {
       setIsRefreshing(false);
@@ -190,45 +188,54 @@ export default function HomeScreen() {
       </View>
 
       {/* Horizontal List of Expiring Items */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.expiringScroll}
-      >
-        {pantryItems.slice(0, 6).map((item, idx) => {
-          const days = getDaysLeft(item);
-          const isUrgent = days <= 2;
-          return (
-            <View key={item._id || idx} style={styles.expiringCard}>
-              <View style={styles.itemImageBox}>
-                {item.imageUrl ? (
-                  <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" />
-                ) : (
-                  <Text style={styles.foodEmojiText}>{getFoodEmoji(item.name)}</Text>
-                )}
-              </View>
-              <Text style={styles.expiringItemName} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <View
-                style={[
-                  styles.daysBadge,
-                  isUrgent ? styles.urgentDaysBadge : styles.normalDaysBadge,
-                ]}
-              >
-                <Text
+      {pantryItems.length === 0 ? (
+        <View style={styles.emptyExpiringBox}>
+          <Text style={styles.emptyExpiringText}>No items currently expiring soon in your pantry.</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Scan')}>
+            <Text style={styles.emptyScanLink}>+ Scan groceries to add items</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.expiringScroll}
+        >
+          {pantryItems.slice(0, 6).map((item, idx) => {
+            const days = getDaysLeft(item);
+            const isUrgent = days <= 2;
+            return (
+              <View key={item._id || idx} style={styles.expiringCard}>
+                <View style={styles.itemImageBox}>
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" />
+                  ) : (
+                    <Text style={styles.foodEmojiText}>{getFoodEmoji(item.name)}</Text>
+                  )}
+                </View>
+                <Text style={styles.expiringItemName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <View
                   style={[
-                    styles.daysBadgeText,
-                    isUrgent ? styles.urgentDaysText : styles.normalDaysText,
+                    styles.daysBadge,
+                    isUrgent ? styles.urgentDaysBadge : styles.normalDaysBadge,
                   ]}
                 >
-                  {days <= 0 ? 'Expires today' : `${days}d left`}
-                </Text>
+                  <Text
+                    style={[
+                      styles.daysBadgeText,
+                      isUrgent ? styles.urgentDaysText : styles.normalDaysText,
+                    ]}
+                  >
+                    {days <= 0 ? 'Expires today' : `${days}d left`}
+                  </Text>
+                </View>
               </View>
-            </View>
-          );
-        })}
-      </ScrollView>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {/* Cook with What is Expiring Section */}
       <Text style={styles.sectionTitle}>Cook with what is expiring</Text>
@@ -247,13 +254,13 @@ export default function HomeScreen() {
           </View>
           <View style={styles.recipeInfoBox}>
             <Text style={styles.recipeTitle} numberOfLines={1}>
-              {featuredRecipe.title || 'Palak Paneer'}
+              {featuredRecipe.title || 'Golden Vegetable Stir-Fry'}
             </Text>
             <Text style={styles.recipeUses} numberOfLines={1}>
-              Uses {(featuredRecipe.usesIngredients || ['Spinach', 'Paneer']).slice(0, 2).join(', ')}
+              Uses {(featuredRecipe.usesIngredients || ['Fresh vegetables']).slice(0, 2).join(', ')}
             </Text>
             <Text style={styles.recipeMeta}>
-              {featuredRecipe.time || '35 min'} • Missing {(featuredRecipe.missingIngredients || []).length || 1} item
+              {featuredRecipe.time || '25 min'} • Ready to cook
             </Text>
             <Text style={styles.recipeLink}>See all suggestions →</Text>
           </View>
@@ -263,19 +270,47 @@ export default function HomeScreen() {
   );
 }
 
-const getDefaultExpiringItems = () => [
-  { _id: 'e1', name: 'Spinach', daysRemaining: 2 },
-  { _id: 'e2', name: 'Milk', daysRemaining: 3 },
-  { _id: 'e3', name: 'Paneer', daysRemaining: 4 },
+const DEFAULT_FEATURED_RECIPES = [
+  {
+    title: 'Golden Vegetable & Rice Stir-Fry',
+    usesIngredients: ['Bell Pepper', 'Carrots', 'Rice'],
+    time: '22 min',
+    missingIngredients: ['Soy Sauce', 'Sesame Oil'],
+    description: 'High-heat colorful wok toss that crisps up near-expiry vegetables with rice.',
+  },
+  {
+    title: 'Mediterranean Tomato Herb Frittata',
+    usesIngredients: ['Tomatoes', 'Eggs', 'Herbs'],
+    time: '15 min',
+    missingIngredients: ['Black Pepper', 'Olive Oil'],
+    description: 'Wholesome skillet frittata turning ripe tomatoes and herbs into a fluffy high-protein meal.',
+  },
+  {
+    title: 'Golden Garlic Herb Chicken & Potatoes',
+    usesIngredients: ['Chicken Breast', 'Potatoes', 'Herbs'],
+    time: '30 min',
+    missingIngredients: ['Rosemary', 'Garlic'],
+    description: 'Savory skillet dinner that browns near-expiry poultry and potatoes with garlic butter.',
+  },
+  {
+    title: 'Comforting Moong Dal Khichdi',
+    usesIngredients: ['Moong Dal', 'Rice', 'Ghee'],
+    time: '25 min',
+    missingIngredients: ['Cumin Seeds', 'Turmeric'],
+    description: 'Nourishing one-pot meal that uses up pantry staples in a fragrant digestive blend.',
+  },
 ];
 
-const getDefaultFeaturedRecipe = () => ({
-  title: 'Palak Paneer',
-  usesIngredients: ['Spinach', 'Paneer'],
-  time: '35 min',
-  missingIngredients: ['Garam Masala'],
-  description: 'Rich spiced spinach gravy with soft paneer cubes that uses up expiring dairy and greens.',
-});
+let lastFeaturedIndex = -1;
+
+const getDefaultFeaturedRecipe = () => {
+  let nextIdx = Math.floor(Math.random() * DEFAULT_FEATURED_RECIPES.length);
+  if (nextIdx === lastFeaturedIndex && DEFAULT_FEATURED_RECIPES.length > 1) {
+    nextIdx = (nextIdx + 1) % DEFAULT_FEATURED_RECIPES.length;
+  }
+  lastFeaturedIndex = nextIdx;
+  return DEFAULT_FEATURED_RECIPES[nextIdx];
+};
 
 const getFoodEmoji = (name = '') => {
   const n = (name || '').toLowerCase();
@@ -433,6 +468,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.textDark,
     textDecorationLine: 'underline',
+  },
+  emptyExpiringBox: {
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    alignItems: 'center',
+  },
+  emptyExpiringText: {
+    fontSize: 13.5,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyScanLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.forestGreen,
   },
   expiringScroll: {
     paddingBottom: 4,

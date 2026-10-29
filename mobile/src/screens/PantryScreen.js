@@ -42,7 +42,7 @@ export default function PantryScreen({ navigation }) {
       }
     } catch (err) {
       console.warn('[Fetch Pantry Error]', err.message);
-      setItems(getFallbackItems());
+      setItems([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -272,32 +272,7 @@ export default function PantryScreen({ navigation }) {
   );
 }
 
-const getFallbackItems = () => [
-  {
-    _id: 'demo1',
-    name: 'Fresh Whole Milk',
-    category: 'Dairy',
-    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 2).toISOString(),
-    quantity: '1 Liter',
-    notes: 'Storage: Keep coldest refrigerator shelf',
-  },
-  {
-    _id: 'demo2',
-    name: 'Whole Grain Sliced Bread',
-    category: 'Bakery',
-    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 1).toISOString(),
-    quantity: '1 Loaf',
-    notes: 'Storage: Dry breadbox',
-  },
-  {
-    _id: 'demo3',
-    name: 'Organic Greek Yogurt',
-    category: 'Dairy',
-    expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 6).toISOString(),
-    quantity: '500g',
-    notes: 'Storage: Sealed at 4C',
-  },
-];
+const getFallbackItems = () => [];
 
 const styles = StyleSheet.create({
   container: {
